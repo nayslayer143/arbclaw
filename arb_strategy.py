@@ -37,7 +37,14 @@ def _kelly(edge, entry_price, balance):
 
 
 def scan(markets, balance):
-    """Scan markets for cross-outcome arb opportunities. Returns list of Signals."""
+    """Scan markets for cross-outcome arb opportunities. Returns list of Signals.
+    Uses learned thresholds per market category when available."""
+    try:
+        import learner
+        use_learner = True
+    except ImportError:
+        use_learner = False
+
     signals = []
     now = time.time()
 
@@ -47,11 +54,24 @@ def scan(markets, balance):
         if yes_p <= 0 or no_p <= 0:
             continue
 
+        # Skip penny contracts
+        if yes_p < 0.03 and no_p < 0.03:
+            continue
+
+        # Check learned blacklist/thresholds
+        if use_learner:
+            cat = learner.categorize(m.get("market_id", ""), m.get("question", ""))
+            if learner.is_blacklisted(cat):
+                continue
+            min_edge = learner.get_min_edge(cat)
+        else:
+            min_edge = MIN_EDGE
+
         # Cost to buy both sides (1 share each) including fees
         total_cost = yes_p + no_p + _fee(yes_p) + _fee(no_p)
         edge = 1.0 - total_cost
 
-        if edge <= MIN_EDGE:
+        if edge <= min_edge:
             continue
 
         # Buy the underpriced side

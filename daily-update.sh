@@ -105,7 +105,7 @@ echo "[arbclaw/daily] Report written: $REPORT"
 
 # ── Commit and push ──
 cd "$ARBCLAW_DIR"
-git add daily/
+git add daily/ logs/ learned_thresholds.json 2>/dev/null; git add daily/
 git commit -m "$(cat <<EOF
 daily report $TODAY — day $day_num | bal=\$$balance pnl=\$$total_pnl trades=$total_trades
 
