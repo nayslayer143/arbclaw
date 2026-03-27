@@ -1,58 +1,46 @@
 # ArbClaw
 
-Lean arbitrage validation experiment — 14-day paper trading test to determine whether Clawmpson's full trading stack introduces execution lag on prediction market arb opportunities.
+The simplest possible Polymarket arb bot. 441 lines of Python. No AI, no agents, no dashboard. Just math.
 
-## Hypothesis
+I built this as a speed baseline for an experiment: my main system ([OpenClaw](https://gitlab.com/jordan291/openclaw)) has a lot of moving parts, and I wanted to know if all that architecture was actually slowing down arb execution. ArbClaw is the control group — what happens when you strip everything away and just run the arb logic?
 
-Clawmpson runs 5 strategies, 5 feeds, LLM analysis, and a graduation engine on a 30-minute cron cycle. For cross-outcome arb where mispricing windows close in minutes, that machinery may cost alpha through execution lag. ArbClaw tests this by running a single strategy on a 5-minute cycle with zero overhead.
+## How it works
 
-## Architecture
+Every 5 minutes:
+1. Fetch all active Polymarket markets
+2. Check if YES + NO prices sum to less than 1.0 (after 2% taker fees per leg)
+3. Size with Kelly criterion
+4. Paper trade the underpriced side
 
-| File | Purpose | Lines |
-|------|---------|-------|
-| `feed.py` | Polymarket gamma API fetch + SQLite cache | 112 |
+That's it. Four files, one strategy, zero overhead.
+
+| File | What it does | Lines |
+|------|-------------|-------|
+| `feed.py` | Polymarket API fetch + SQLite cache | 112 |
 | `arb_strategy.py` | Cross-outcome arb detection + Kelly sizing | 77 |
-| `wallet.py` | Paper wallet with signal-to-trade latency tracking | 192 |
-| `run.py` | Entry point chaining feed -> strategy -> wallet | 60 |
+| `wallet.py` | Paper wallet with latency tracking | 192 |
+| `run.py` | Entry point | 60 |
 
-**Total: 441 lines.** No LLM. No OSINT. No momentum. No agents. No dashboard.
+## The experiment
 
-## Strategy
+Three systems running the same arb logic on the same machine:
 
-Pure cross-outcome arb only: detect when YES + NO prices for the same Polymarket market sum to less than 1.0 after accounting for 2% taker fees per leg. Kelly criterion sizes positions. Buy the underpriced side.
+| System | Complexity | Cycle |
+|--------|-----------|-------|
+| **ArbClaw** (this) | 4 files, 441 lines | 5 min |
+| **RivalClaw** | Full architecture, arb only | 5 min |
+| **Clawmpson** | Full system, 5 strategies | 30 min |
 
-## Paper Wallet Rules
+Key metric: `signal_to_trade_latency_ms` — how long from spotting an opportunity to placing the trade?
 
-- Starting capital: $1,000
-- Max position: 10% of balance
-- Stop-loss: -20%
-- Take-profit: +50%
-- Key metric: `signal_to_trade_latency_ms`
+## Outcome logic
 
-## Cron
-
-Runs every 5 minutes (vs Clawmpson's 30-minute cycle).
-
-## Comparison (after 14 days)
-
-| Metric | ArbClaw Target | Clawmpson Baseline |
-|--------|---------------|-------------------|
-| Signal-to-trade latency | <30s | ~30min cycle |
-| Win rate | Track | Track |
-| Edge capture rate | Track | Track |
-| Total PnL | Track | Track |
-
-## Outcome
-
-- If ArbClaw captures more edge -> build fast-path mode into Clawmpson
-- If Clawmpson wins anyway -> architecture validated, delete ArbClaw
-- Either way, we learn something
-
-## Daily Reports
-
-Auto-generated daily performance reports are posted to `daily/` by cron at 11:50 PM.
+- If ArbClaw captures more edge → build a fast-path mode into Clawmpson
+- If Clawmpson wins anyway → architecture validated, ArbClaw gets retired
+- Either way, I learn something
 
 ## Status
 
-**Experiment start:** 2026-03-24
-**Experiment end:** 2026-04-07
+Paper trading experiment running March 24 – April 7, 2026. Daily reports auto-generated in `daily/`.
+
+Part of the [OpenClaw](https://gitlab.com/jordan291/openclaw) ecosystem.
