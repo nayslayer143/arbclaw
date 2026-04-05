@@ -1,46 +1,52 @@
+---
+project: arbclaw
+type: trading-agent
+stack: [python, sqlite]
+status: active
+github: https://github.com/nayslayer143/arbclaw
+gitlab: https://gitlab.com/jordan291/arbclaw
+instance: ArbClaw
+parent: openclaw
+children: []
+---
+
 # ArbClaw
 
-The simplest possible Polymarket arb bot. 441 lines of Python. No AI, no agents, no dashboard. Just math.
+Minimal arbitrage bot — the speed and execution baseline for the OpenClaw ecosystem.
 
-I built this as a speed baseline for an experiment: my main system ([OpenClaw](https://gitlab.com/jordan291/openclaw)) has a lot of moving parts, and I wanted to know if all that architecture was actually slowing down arb execution. ArbClaw is the control group — what happens when you strip everything away and just run the arb logic?
+## What This Is
 
-## How it works
+ArbClaw is a stripped-down arb execution agent. It exists to establish a performance baseline that RivalClaw and other trading agents are compared against. The simplest possible Polymarket arb bot — no AI, no agents, no dashboard. Just math. The control group for whether OpenClaw's architecture actually helps or hurts arb execution speed.
 
-Every 5 minutes:
-1. Fetch all active Polymarket markets
-2. Check if YES + NO prices sum to less than 1.0 (after 2% taker fees per leg)
-3. Size with Kelly criterion
-4. Paper trade the underpriced side
+## Architecture
 
-That's it. Four files, one strategy, zero overhead.
+- **Minimal surface area** — smallest possible codebase for arb detection and execution
+- **Metrics-compatible** — exports daily JSON matching the OpenClaw comparison contract
+- **Sub-agent of Clawmpson** — runs within the OpenClaw orchestration layer
 
-| File | What it does | Lines |
-|------|-------------|-------|
-| `feed.py` | Polymarket API fetch + SQLite cache | 112 |
-| `arb_strategy.py` | Cross-outcome arb detection + Kelly sizing | 77 |
-| `wallet.py` | Paper wallet with latency tracking | 192 |
-| `run.py` | Entry point | 60 |
+## Key Files
 
-## The experiment
+| File/Dir | Purpose |
+|----------|---------|
+| `CLAUDE.md` | Agent instructions (if exists) |
+| `src/` | Core arbitrage logic |
 
-Three systems running the same arb logic on the same machine:
+## Quick Start
 
-| System | Complexity | Cycle |
-|--------|-----------|-------|
-| **ArbClaw** (this) | 4 files, 441 lines | 5 min |
-| **RivalClaw** | Full architecture, arb only | 5 min |
-| **Clawmpson** | Full system, 5 strategies | 30 min |
+```bash
+git clone https://github.com/nayslayer143/arbclaw.git
+cd arbclaw
+cat CLAUDE.md  # Architecture and constraints
+```
 
-Key metric: `signal_to_trade_latency_ms` — how long from spotting an opportunity to placing the trade?
+## Related Projects
 
-## Outcome logic
+| Project | Relationship | Repo |
+|---------|-------------|------|
+| OpenClaw | Parent — orchestrator | [GitHub](https://github.com/nayslayer143/openclaw) |
+| RivalClaw | Sibling — arb architecture comparison | [GitHub](https://github.com/nayslayer143/rivalclaw) |
+| QuantumentalClaw | Sibling — signal fusion | [GitHub](https://github.com/nayslayer143/quantumentalclaw) |
 
-- If ArbClaw captures more edge → build a fast-path mode into Clawmpson
-- If Clawmpson wins anyway → architecture validated, ArbClaw gets retired
-- Either way, I learn something
+## License
 
-## Status
-
-Paper trading experiment running March 24 – April 7, 2026. Daily reports auto-generated in `daily/`.
-
-Part of the [OpenClaw](https://gitlab.com/jordan291/openclaw) ecosystem.
+Private project.
